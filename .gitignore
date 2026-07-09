@@ -1,0 +1,21 @@
+# API 密钥——绝不上传
+.env
+.env.*
+!.env.example
+
+# Python 运行产物
+__pycache__/
+*.pyc
+example_project/端到端示例_考前3分钟/backend/.venv/
+example_project/端到端示例_考前3分钟/backend/journals/
+
+# 系统文件
+.DS_Store
+
+# slides 产线中间产物(保留 gen.py / build.js)
+slides/_src/html/
+slides/_src/html_web_basics/
+slides/_src/prev_*.png
+slides/_src/wb_*.png
+slides/_src/shot.js
+slides/_src/shotwb.js

@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="zh"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Build 与 Ship 双支柱 · 开发+部署交互指南</title>
+<style>
+:root{--cream:#FBF7F0;--ink:#1A1A1A;--red:#E8352E;--navy:#1A365D;--yellow:#FFF1B8;--grey:#555;--line:#1A1A1A;--pass:#2D7D46;--fail:#B03A2E;--accent:#C2410C}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;background:var(--cream);color:var(--ink);line-height:1.6}
+.wrap{display:flex;max-width:1200px;margin:0 auto;min-height:100vh}
+.rail{width:236px;flex-shrink:0;padding:26px 14px;border-right:2px solid var(--line);position:sticky;top:0;height:100vh;overflow-y:auto}
+.rail h1{font-size:16px;margin-bottom:3px}.rail .tag{font-size:11px;color:var(--accent);font-weight:700;letter-spacing:1px;margin-bottom:16px;display:block}
+.grp{font-size:11px;font-weight:800;letter-spacing:1px;color:var(--navy);margin:16px 0 6px;padding-left:4px}.grp.s{color:var(--accent)}
+.node{display:flex;align-items:flex-start;gap:9px;padding:8px;border-radius:8px;cursor:pointer;margin-bottom:2px}
+.node:hover{background:#fff}.node.active{background:var(--yellow)}
+.dot{width:32px;height:30px;flex-shrink:0;border:2px solid var(--line);border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:11px;box-shadow:2px 2px 0 var(--ink)}
+.node.active .dot{background:var(--accent);color:#fff}.node.s.active .dot{background:var(--navy)}
+.node .nt{font-size:13px;font-weight:700}.node .ns{font-size:10.5px;color:var(--grey)}
+.gp{font-size:10px;font-weight:700;color:#aaa}.gp.full{color:var(--pass)}
+.rail .foot{font-size:10.5px;color:var(--grey);margin-top:18px;padding:8px;border-top:1px dashed #bbb}
+.main{flex:1;padding:32px 40px;max-width:944px}
+.crumb{font-size:12px;color:var(--accent);font-weight:700;letter-spacing:2px}
+h2{font-size:26px;margin:4px 0 2px}.sub{color:var(--grey);font-size:15px;margin-bottom:18px}
+.goal{background:var(--yellow);border:2px solid var(--line);box-shadow:4px 4px 0 var(--ink);padding:13px 18px;border-radius:10px;margin-bottom:20px;font-size:15px}
+.sec{margin-bottom:20px}.sec h3{font-size:13px;color:var(--accent);letter-spacing:1px;margin-bottom:8px}
+.idea{background:#fff;border:2px solid var(--line);border-left:8px solid var(--navy);border-radius:10px;padding:12px 18px;font-size:14px}.idea b{color:var(--navy)}
+.steps{list-style:none;counter-reset:st}
+.steps li{counter-increment:st;position:relative;padding:8px 0 8px 42px;font-size:14px;border-bottom:1px dashed #ddd}.steps li:last-child{border-bottom:none}
+.steps li:before{content:counter(st);position:absolute;left:2px;top:8px;width:26px;height:26px;border:2px solid var(--line);border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;box-shadow:2px 2px 0 var(--ink)}
+.steps li b{color:var(--accent)}.steps code{background:#f2efe8;padding:1px 5px;border-radius:4px;font-size:12.5px}
+.chk{list-style:none}.chk li{padding:7px 0;cursor:pointer;font-size:14px}.chk li:before{content:"\2610 ";color:var(--accent);font-weight:700}
+.chk li.done{color:#999;text-decoration:line-through}.chk li.done:before{content:"\2611 ";color:var(--pass)}
+.think{background:#fff;border:2px dashed var(--accent);border-radius:10px;padding:13px 18px;font-size:14px}.think b{color:var(--accent)}
+.nav{display:flex;justify-content:space-between;margin-top:28px;padding-top:16px;border-top:2px solid var(--line)}
+.nav button{font-family:inherit;font-size:14px;font-weight:700;padding:10px 18px;border:2px solid var(--line);background:#fff;border-radius:8px;cursor:pointer;box-shadow:3px 3px 0 var(--ink)}
+.nav button:active{box-shadow:0 0 0;transform:translate(3px,3px)}.nav button:disabled{opacity:.3;cursor:default;box-shadow:none}
+.flow{display:flex;flex-wrap:wrap;gap:0;margin:6px 0 14px}
+.fstep{flex:1;min-width:120px;border:2px solid var(--line);border-radius:10px;background:#fff;box-shadow:3px 3px 0 var(--ink);padding:11px 12px;position:relative;margin:0 16px 12px 0}
+.fstep .l{font-size:15px;font-weight:800;color:var(--navy)}.fstep.acc .l{color:var(--accent)}.fstep .t{font-size:12px;color:#444}
+.fstep:after{content:"\2192";position:absolute;right:-15px;top:34%;font-weight:800;color:var(--accent)}.fstep.last:after{content:""}
+.adv{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin:6px 0 14px}
+@media(max-width:720px){.adv{grid-template-columns:1fr}.wrap{flex-direction:column}.rail{width:100%;height:auto;position:static;border-right:none;border-bottom:2px solid var(--line)}}
+.acard{border:2px solid var(--line);border-radius:10px;background:#fff;box-shadow:3px 3px 0 var(--ink);padding:12px 14px}.acard .h{font-size:15px;font-weight:800;color:var(--navy);margin-bottom:4px}.acard .b{font-size:12.5px;color:#444}
+/* widgets */
+.sim{background:#fff;border:2px solid var(--fail);border-radius:12px;padding:16px 18px;margin-top:6px}
+.sim textarea{width:100%;min-height:80px;border:2px solid var(--line);border-radius:8px;padding:8px;font-family:ui-monospace,Menlo,monospace;font-size:12.5px;resize:vertical}
+.sim button{font-family:inherit;font-size:13px;font-weight:700;border:2px solid var(--line);background:var(--navy);color:#fff;border-radius:8px;padding:8px 16px;margin-top:8px;cursor:pointer;box-shadow:2px 2px 0 var(--ink)}
+.sim .verdict{font-size:15px;font-weight:800;padding:8px 14px;border-radius:8px;display:inline-block;margin-top:10px}
+.sim .verdict.pass{background:#E6F4EA;color:var(--pass);border:2px solid var(--pass)}.sim .verdict.fail{background:#FBECEA;color:var(--fail);border:2px solid var(--fail)}
+.chooser{background:#fff;border:2px solid var(--navy);border-radius:12px;padding:16px 18px;margin-top:6px}
+.chooser .q{font-size:14px;font-weight:700;margin-bottom:8px}
+.chooser button{font-family:inherit;font-size:13px;font-weight:700;border:2px solid var(--line);background:#fff;border-radius:16px;padding:6px 14px;margin:0 8px 8px 0;cursor:pointer;box-shadow:2px 2px 0 var(--ink)}
+.chooser .rec{font-size:14px;margin-top:8px;padding:10px 12px;background:var(--yellow);border:2px solid var(--line);border-radius:8px;display:none}
+</style></head>
+<body><div class="wrap">
+<div class="rail">
+  <h1>Build × Ship</h1><span class="tag">开发+部署双支柱 · 2_dev_deploy</span>
+  <div id="railnodes"></div>
+  <div class="foot">🔒 门禁进度存在浏览器<br>详细见各阶段 <code>.md</code> + 运行示例</div>
+</div>
+<div class="main" id="main"></div>
+</div>
+<script>
+const OV={id:"总览",overview:true};
+const S=[
+{id:"B0",group:"b",title:"你是导演,不是码农",sub:"B0 · BUILD 总览",
+ goal:"零编程也能做出来:你指挥 Claude Code 写代码,你负责看懂架构、守住 key 安全、把关体验。",
+ idea:"三层架构:<b>前端(公开,无 key)→ 后端(藏 key、跑你的 agent)→ 模型(OpenRouter)</b>。<br>后端不用从零——就是你在 <b>1_claude_code_basic</b> 造的 mini CC harness(c0–c5)。它的五支柱正好对应上线要的能力,<b>c3 子 agent = 安全复核 = 1_DEFINE E4 自检环</b>。",
+ steps:["记住:写代码交给 Claude Code;<b>定义问题、守安全、做判断</b>永远是你。","选一档参考架构:小智(静态+兜底)/ HEAI(FastAPI,默认)/ Leo(全栈进阶)。","往下 B1→B4,把后端装好、前端连上、本地跑通。"],
+ gate:[],think:"打开你的项目:用户点一下,请求会经过哪三层?key 在哪一层?如果答不上来,先别写代码。"},
+{id:"B1",group:"b",title:"装配后端 agent",sub:"B1 · 以 harness 为底装上专业 → 技术架构卡",
+ goal:"以 c5 harness 为底,按你的 PRD 装上领域 skills + 危机转介 skill,并开一个 c3 子 agent 做安全复核。",
+ idea:"<b>装什么</b>:agent.md(人设三段式)+ 领域 skills(如正念/CBT)+ <b>危机转介 skill(置顶必备)</b>。<br><b>开哪个支柱</b>:c3 子 agent 复核安全;要工具→c1 工具箱;长对话→c4 压缩。",
+ steps:["让 Claude Code 把你的 PRD 第④⑤⑦节 翻译成 agent.md + skill_*.md。","把 <code>skill_危机转介.md</code> 放在最前(危机永远先看)。","开一个 c3 式子 agent:主 agent 出稿→子 agent 审\"安不安全\"。","参照运行示例 <code>backend/agent.md</code> + <code>skills/</code>。"],
+ gate:["agent.md 人设三段式完整","领域 skill ≥1 个","危机转介 skill 置顶","子 agent 安全复核已开"],
+ think:"如果用户说\"撑不下去了\",你的 agent 现在会怎么走?危机 skill 有没有被真的触发?"},
+{id:"B2",group:"b",title:"把 harness 变成 /api/chat",sub:"B2 · 后端服务化 → API 契约卡",
+ goal:"让 Claude Code 把 harness 从 while input() 循环,改成一个无状态的 FastAPI 接口。",
+ idea:"<b>无状态</b>:前端传 <code>messages</code> → 后端跑一轮 harness → 回 <code>reply</code>。<br><b>key 走 env</b>(<code>os.environ</code>,绝不写死);<b>去掉 bash</b>,只留白名单工具(c5 权限门的服务端版);<b>调不通返回兜底</b>,不给 500。",
+ steps:["让 Claude Code 生成 <code>main.py</code>:FastAPI + <code>/api/chat</code> + <code>/api/health</code>。","key 从 <code>os.getenv(\"OPENROUTER_API_KEY\")</code> 读;加 CORS。","危机拦截用<b>确定性代码</b> is_crisis() 兜底(不只靠模型)。","逐段读懂运行示例 <code>backend/main.py</code>,照它改成你的。"],
+ gate:["本地 uvicorn 能起","/api/chat 返回 reply","key 只在 env,代码里搜不到","危机输入→确定性返回转介","调不通有 FALLBACK 不 500"],
+ think:"为什么服务端<b>绝不能</b>把 bash 暴露给用户当工具?(想想谁能往你的输入框里打字。)"},
+{id:"B3",group:"b",title:"三句话生成聊天前端",sub:"B3 · 前端界面 → 前端提示词卡",
+ goal:"用三句话让 Claude Code 生成一个贴你项目风格的聊天页,并把安全做进界面。",
+ idea:"<b>提示词三句</b>:做什么页(聊天界面)/ 什么风格(温暖治愈 or 专业极简,贴你项目)/ 连哪个后端(调 /api/chat)。<br>两个必加:<b>危机求助按钮</b> + <b>优雅降级</b>(后端连不上不白屏,小智 CompositeProvider 思想)。",
+ steps:["给 Claude Code 三句话提示词,先出一版。","逐句捏风格,像捏橡皮泥,让它\"像你的产品\"。","加一个醒目的\"危机求助\"按钮。","加 catch:后端挂了给兜底话术 + 热线,不白屏。"],
+ gate:["本地能发消息、看到回复","风格贴项目定位","有危机求助按钮","后端断开有降级提示"],
+ think:"你的前端里,会不会不小心出现 key?(下一步 B4 我们就来扫它。)"},
+{id:"B4",group:"b",title:"上线前先走一遍安全关",sub:"B4 · 连通与安全自检",
+ goal:"前端只调后端、绝不放 key;本地把全栈跑通,过前端安全清单。",
+ idea:"<b>前端是公开的</b>——任何人右键\"查看源代码\"就能看到一切。所以 <b>key 只能待在后端</b>。上线前必扫:<code>grep -rniE \"sk-[a-z0-9]{16}\"</code> 前端目录必须为零。",
+ steps:["确认前端只 fetch 你的 <code>/api/chat</code>,不直连模型。","跑 grep 扫 sk-,必须为零。","配好 CORS(后端允许前端域名)。","换手机/别人电脑打开,能对话。"],
+ gate:["前端无任何 sk-","只调后端接口","CORS 配好、能跨域","手机也能对话"],
+ think:"如果你把 key 写进了前端并上线,最坏会发生什么?(提示:一夜之间的账单。)",
+ sim:"keyscan"},
+{id:"S0",group:"s",title:"静态还是动态?",sub:"S0 · SHIP 总览",
+ goal:"分清你的作品是静态还是动态,才知道走哪条上线路径。不上线 = 没有 impact。",
+ idea:"<b>静态</b>(只有界面/展示,不真调模型)→ GitHub Pages,免费最简单。<br><b>动态</b>(要真对话:调模型/存数据)→ 后端上 Railway(默认,Python 友好),key 藏后端。<br>成本:Pages/Vercel 免费;Railway ~$5 试用(非永久免费)。",
+ steps:["判断:你的作品要不要真的调模型对话?","只展示 → 静态 → Pages。","要对话 → 动态 → 前端 Pages + 后端 Railway。","用下面的\"部署选型助手\"确认。"],
+ gate:[],think:"路演那天,你是先上一个静态展示页保底,还是直接冲动态全栈?两手准备更稳。",
+ chooser:true},
+{id:"S1",group:"s",title:"静态展示上线(GitHub Pages)",sub:"S1 · GitHub Pages → 公网展示 URL",
+ goal:"把纯前端/展示页推上 GitHub Pages,拿到一个谁都能打开的免费网址。",
+ idea:"四步:建仓库 → Settings→Pages 选分支 → 等一分钟拿到 <code>用户名.github.io/仓库</code> → 分享。免费、你已在用 GitHub、纯静态最省事。",
+ steps:["把前端代码 push 到 GitHub 仓库。","仓库 Settings → Pages → 选分支(和目录)。","等构建完成,拿到公网 URL。","手机打开验证一下。"],
+ gate:["前端已 push","Pages 已开启","公网 URL 能打开","手机也能开"],
+ think:"这个静态页现在能对话吗?如果不能,缺的是哪一层?(答案在 S2。)"},
+{id:"S2",group:"s",title:"后端上线(Railway)",sub:"S2 · FastAPI → Railway → 后端 URL",
+ goal:"把 FastAPI 后端部署到 Railway,拿到后端公网地址;key 只放平台 Variables。",
+ idea:"Railway 用 Nixpacks <b>自动识别 Python</b>、自动装 requirements——这就是它比 Vercel 对 Python 友好的地方(= HEAI/renben.ai 同款)。<br>免费替代:Vercel(Node serverless)。",
+ steps:["Railway → Deploy from GitHub repo,选后端目录。","Variables 填 <code>OPENROUTER_API_KEY</code>、<code>CORS_ORIGINS</code>。","启动命令(若需):<code>uvicorn main:app --host 0.0.0.0 --port $PORT</code>。","访问 <code>/api/health</code> 应返回 ok。"],
+ gate:["后端已部署、有域名","key 在 Variables、不在代码","/api/health 返回 ok","记下后端 URL 给前端用"],
+ think:"key 现在在哪儿?能不能在你的 GitHub 仓库里搜到它?(如果能,立刻删并换 key。)"},
+{id:"S3",group:"s",title:"前端接后端,整体上线",sub:"S3 · 改一行 + CORS + 手机测",
+ goal:"把前端指向后端 URL,配好跨域,让任何人手机点开就能对话。",
+ idea:"改前端一行 <code>BACKEND = 你的 Railway 域名</code>;后端 <code>CORS_ORIGINS</code> 填你的 Pages 域名(否则浏览器拦跨域);换设备<b>手机测</b>。",
+ steps:["前端 BACKEND 改成 Railway 域名,重新部署 Pages。","后端 CORS_ORIGINS 填 Pages 域名。","手机 + 别人电脑各测一次真实对话。","故意断网/等超时,验证降级不白屏。"],
+ gate:["线上前端能连线上后端","跨设备/手机能对话","CORS 无报错","降级验证过"],
+ think:"如果同学用安卓、你只在 iPhone 测过,会不会翻车?跨设备为什么必须测?"},
+{id:"S4",group:"s",title:"上线检查 + 结项",sub:"S4 · 逐条勾选 → 结项技术文档",
+ goal:"过一遍上线检查清单,产出结项技术文档,让项目\"完整\"。",
+ idea:"上线清单:<b>密钥</b>(grep sk- 为零/env/git 历史干净)· <b>可用</b>(URL+手机)· <b>合规</b>(AI 身份+隐私+危机热线 12356)· <b>降级</b> · <b>README 三要素</b>。<br>国内长期用 → 可迁腾讯云/阿里云(需实名+少量费用)。",
+ steps:["逐条跑上线检查清单(见 templates/上线检查清单)。","写结项技术文档:架构图+部署说明+复现步骤。","录一段手机演示。","把网址发群里——这就是 impact 的起点。"],
+ gate:["上线清单全过","结项技术文档完成","手机演示已录","公网链接可分享"],
+ think:"一个真实用户用上你的 agent、给了你一句反馈——这算不算 impact?impact 分大小吗?"}
+];
+const ALL=[OV,...S];
+let cur=0;
+const K="dev_deploy_gates"; const gates=JSON.parse(localStorage.getItem(K)||"{}");
+function saveGates(){localStorage.setItem(K,JSON.stringify(gates))}
+function renderRail(){
+ let h=`<div class="node ${cur===0?'active':''}" onclick="go(0)"><div class="dot">◎</div><div><div class="nt">总览</div><div class="ns">双支柱地图</div></div></div>`;
+ h+=`<div class="grp">做出来 · BUILD</div>`;
+ S.forEach((s,i)=>{const idx=i+1;const tot=s.gate.length;const dn=Math.min((gates[s.id]||[]).length,tot);
+  if(s.id==="S0")h+=`<div class="grp s">送上线 · SHIP</div>`;
+  const gp=tot?`<span class="gp ${dn===tot&&tot>0?'full':''}">${dn}/${tot}</span>`:"";
+  h+=`<div class="node ${s.group==='s'?'s':''} ${cur===idx?'active':''}" onclick="go(${idx})"><div class="dot">${s.id}</div><div><div class="nt">${s.title.length>12?s.title.slice(0,12)+'…':s.title}</div><div class="ns">${s.id} ${gp}</div></div></div>`;});
+ document.getElementById("railnodes").innerHTML=h;
+}
+function overviewHTML(){
+ const fs=[["前端","公开·无 key","acc"],["后端","藏 key·跑 harness",""],["模型","OpenRouter",""]];
+ let flow=fs.map((s,i)=>`<div class="fstep ${s[2]} ${i===2?'last':''}"><div class="l">${s[0]}</div><div class="t">${s[1]}</div></div>`).join("");
+ return `<div class="crumb">总览 · OVERVIEW</div><h2>Build 与 Ship 双支柱</h2><div class="sub">把 PRD 变成手机能打开、能对话的公网应用</div>
+ <div class="goal">你已经用 1_DEFINE 想清楚、评明白;这个模块把它 <b>做出来(Build)</b> 并 <b>送上线(Ship)</b>——补齐 i2i 的后半段。<b>你不需要会写代码</b>,你指挥 Claude Code,你守住架构与安全。</div>
+ <div class="sec"><h3>三层架构(key 只在后端)</h3><div class="flow">${flow}</div></div>
+ <div class="sec"><h3>后端地基 = 你造过的 mini CC harness</h3><div class="adv">
+  <div class="acard"><div class="h">c1 工具箱</div><div class="b">读写文件 + 领域工具</div></div>
+  <div class="acard"><div class="h">c3 子 agent</div><div class="b">安全复核 = 1_DEFINE E4 落地</div></div>
+  <div class="acard"><div class="h">c5 权限门</div><div class="b">服务端只留白名单工具</div></div></div></div>
+ <div class="think"><b>三条红线:</b>key 只能待在后端 · 危机由确定性代码兜底 · 不上线就没有 impact。</div>`;
+}
+function keyscanHTML(){
+ return `<div class="sec"><h3>🔑 密钥泄漏自检模拟器</h3><div class="sim">
+ <div style="font-size:13px;margin-bottom:6px;color:#444">把你<b>前端</b>代码片段粘进来,点扫描——它会像上线前那样找 key 和\"前端直连模型\"的危险写法:</div>
+ <textarea id="code" placeholder="粘贴前端 index.html / js 片段..."></textarea>
+ <button onclick="scanKey()">扫描前端安全</button>
+ <div id="kv"></div></div></div>`;
+}
+function scanKey(){
+ const t=document.getElementById("code").value;
+ const hits=[];
+ if(/sk-[A-Za-z0-9]{12,}/.test(t)||/sk-or-/.test(t)) hits.push("发现疑似 API key(sk-…)——绝不能在前端!");
+ if(/openrouter\.ai|api\.openai\.com|api\.anthropic\.com/.test(t)) hits.push("前端直接 fetch 模型 API——应改成调你自己的后端 /api/chat");
+ if(/Authorization|x-api-key|Bearer\s+sk/.test(t)) hits.push("前端出现 Authorization/key 头——密钥应留在后端");
+ const v=document.getElementById("kv");
+ if(!t.trim()){v.innerHTML="";return;}
+ v.innerHTML = hits.length
+   ? `<div class="verdict fail">✘ FAIL · ${hits.length} 处风险</div><ul style="margin:8px 0 0 18px;font-size:13px">${hits.map(h=>`<li>${h}</li>`).join("")}</ul>`
+   : `<div class="verdict pass">✔ PASS · 没发现 key,也没直连模型</div>`;
+}
+function chooserHTML(){
+ return `<div class="sec"><h3>🧭 部署选型助手</h3><div class="chooser">
+ <div class="q">你的作品要不要<b>真的调模型对话</b>(而不只是展示界面)?</div>
+ <button onclick="rec('static')">不用,只展示</button>
+ <button onclick="rec('dyn')">要,真对话</button>
+ <button onclick="rec('cn')">要,而且长期给国内用户用</button>
+ <div class="rec" id="rec"></div></div></div>`;
+}
+function rec(k){
+ const r=document.getElementById("rec"); r.style.display="block";
+ if(k==="static") r.innerHTML="→ <b>静态</b>:前端放 <b>GitHub Pages</b>(免费)。不需要后端。";
+ else if(k==="dyn") r.innerHTML="→ <b>动态</b>:前端 <b>GitHub Pages</b> + 后端 <b>Railway</b>(Python 友好,默认)。key 放 Railway Variables。零成本可换 Vercel。";
+ else r.innerHTML="→ <b>动态 + 国内</b>:先用 Pages + Railway 跑通;长期给国内用户 → 后端迁 <b>腾讯云/阿里云</b>(需实名+少量费用),前端可套 Cloudflare。";
+}
+function navHTML(){return `<div class="nav"><button ${cur===0?'disabled':''} onclick="go(${cur-1})">← 上一步</button><button ${cur===ALL.length-1?'disabled':''} onclick="go(${cur+1})">下一步 →</button></div>`;}
+function render(){
+ const it=ALL[cur],main=document.getElementById("main");
+ if(it.overview){main.innerHTML=overviewHTML()+navHTML();renderRail();return;}
+ const s=it;
+ let h=`<div class="crumb">${s.sub}</div><h2>${s.title}</h2>`;
+ h+=`<div class="goal">🎯 ${s.goal}</div>`;
+ h+=`<div class="sec"><h3>新想法</h3><div class="idea">${s.idea}</div></div>`;
+ h+=`<div class="sec"><h3>操作步骤(指挥 Claude Code + 你验收)</h3><ol class="steps">${s.steps.map(x=>`<li>${x}</li>`).join("")}</ol></div>`;
+ if(s.sim==="keyscan")h+=keyscanHTML();
+ if(s.chooser)h+=chooserHTML();
+ if(s.gate.length){const done=gates[s.id]||[];
+  h+=`<div class="sec"><h3>门禁检查(过了才进下一步)</h3><ul class="chk" id="chk">${s.gate.map((g,i)=>`<li class="${done.includes(i)?'done':''}" data-i="${i}">${g}</li>`).join("")}</ul></div>`;}
+ h+=`<div class="think">💭 <b>思考题:</b>${s.think}</div>`+navHTML();
+ main.innerHTML=h;
+ if(s.gate.length)document.querySelectorAll("#chk li").forEach(li=>li.onclick=()=>{
+   const i=+li.dataset.i,arr=gates[s.id]||[],p=arr.indexOf(i);
+   if(p>=0)arr.splice(p,1);else arr.push(i);gates[s.id]=arr;saveGates();li.classList.toggle("done");renderRail();});
+ renderRail();
+}
+function go(i){cur=Math.max(0,Math.min(ALL.length-1,i));window.scrollTo(0,0);render();}
+render();
+</script>
+</body></html>
